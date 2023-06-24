@@ -13,3 +13,4 @@ plotly
 streamlit_extras
 pandas_ta
 numpy
+altair==4.1.0
