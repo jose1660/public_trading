@@ -1,0 +1,15 @@
+streamlit
+yfinance
+#performance
+watchdog
+#para fechas
+datetime
+pendulum
+pandas
+requests
+requests_cache==0.5.2
+streamlit_lightweight_charts
+plotly
+streamlit_extras
+pandas_ta
+numpy
