@@ -1,32 +1,10 @@
   #import required libraries
 import streamlit as st
-import yfinance as yf
 import plotly.graph_objects as go
+import yfinance as yf
 
-import datetime
-import requests_cache
-import pendulum
-
-ohlc = {
-          'Open': 'first',
-          'High': 'max',
-          'Low': 'min',
-          'Close': 'last',
-          'Volume': 'sum'
-      }
-
-now = datetime.datetime.now()
-now1 = datetime.datetime.now() + datetime.timedelta(days=1)
-hoy = now.strftime("%Y-%m-%d %H:%M:%S")
-
-expire_after = datetime.timedelta(days=3)
-session = requests_cache.CachedSession(cache_name='cache', backend='sqlite', expire_after=expire_after)
-session.headers = {     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',     'Accept': 'application/json;charset=utf-8'     }
-
-#2023-03-06", "2023-03-07"
-fecha_actual = now.strftime("%Y-%m-%d")
-fecha_manana = now1.strftime("%Y-%m-%d")
-fecha_print = now.strftime("%d-%m-%Y")
+#Clases internas.
+from get_data import *
 
 #function calling local css sheet
 def local_css(file_name):
@@ -43,56 +21,55 @@ button_clicked = st.sidebar.button("GO")
 if button_clicked == "GO":
     main()
 
+
 #main function
 def main():
-    st.subheader("""Daily **closing price** for """ + selected_stock)
-    #get data on searched ticker
-    stock_data = yf.Ticker(selected_stock)
-    #get historical data for searched ticker
-    #stock_df = stock_data.history(period='1d', start='2020-01-01', end=None)
-    start = pendulum.parse("2023-06-01") #fecha_actual My tz is UTC+03:00, original TZ UTC-04:00. So adds to my local time 7 hours
-    end = pendulum.parse(fecha_actual) # fecha_manana
-    #df1 = yf.download('SPY', period="1mo", interval='30m')
-    stock_df = yf.download(selected_stock, start=start, end=end, interval='30m',prepost = False)[['Open', 'High', 'Low', 'Close', 'Volume']]
+    st.subheader("""1h ** price** for """ + selected_stock)
+    stock_df = get_hour(selected_stock) #from the file get_data.py
 
-    stock_df = stock_df.resample('1h').apply(ohlc)
-    stock_df.between_time('09:00', '16:00')
-    
     fig = go.Figure()
-
     fig.add_trace(go.Candlestick(x=stock_df.index,
                                    open=stock_df['Open'], high=stock_df['High'],
                                    low=stock_df['Low'], close=stock_df['Close']))
-
     fig.update_xaxes(
         rangeslider_visible=False,
         rangebreaks=[
             # NOTE: Below values are bound (not single values), ie. hide x to y
             dict(bounds=["sat", "mon"]),  # hide weekends, eg. hide sat to before mon
             dict(bounds=[16, 9], pattern="hour"),  # hide hours outside of 9.30am-4pm
-            #dict(type="category"),
-            # dict(values=["2020-12-25", "2021-01-01"])  # hide holidays (Christmas and New Year's, etc)
         ]
     )
 
     st.plotly_chart(
     fig, 
     theme="streamlit",  # ✨ Optional, this is already set by default!
-)
+    )
+
+    
+    
+    st.subheader("""Monthly ** price** for """ + selected_stock)
+
+    stock_df = get_daily(selected_stock) #from the file get_data.py
+
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(x=stock_df.index,
+                                   open=stock_df['Open'], high=stock_df['High'],
+                                   low=stock_df['Low'], close=stock_df['Close']))
+    fig.update_xaxes(
+        rangeslider_visible=False,
+        rangebreaks=[
+            # NOTE: Below values are bound (not single values), ie. hide x to y
+            dict(bounds=["sat", "mon"]),  # hide weekends, eg. hide sat to before mon
+        ]
+    )
+
+    st.plotly_chart(
+    fig, 
+    theme="streamlit",  # ✨ Optional, this is already set by default!
+    )
     
 
-    st.subheader("""Last **closing price** for """ + selected_stock)
-    #define variable today 
-    today = datetime.today().strftime('%Y-%m-%d')
-    #get current date data for searched ticker
-    stock_lastprice = stock_data.history(period='1d', start=today, end=today)
-    #get current date closing price for searched ticker
-    last_price = (stock_lastprice.Close)
-    #if market is closed on current date print that there is no data available
-    if last_price.empty == True:
-        st.write("No data available at the moment")
-    else:
-        st.write(last_price)
+
     
     #get daily volume for searched ticker
     st.subheader("""Daily **volume** for """ + selected_stock)
